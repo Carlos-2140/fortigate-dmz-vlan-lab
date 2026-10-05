@@ -12,7 +12,9 @@ El objetivo principal es implementar segmentación mediante VLAN, control de acc
 
 ## Topología
 
-![Diagrama de topología](Topologia/Diagrama%20Topolog%C3%ADa.png)
+![Topología real en GNS3](Topologia/Captura%20de%20pantalla%202026-10-04%20210438.png)
+
+La imagen anterior corresponde a la topología real implementada en **GNS3**.
 
 La topología está compuesta por:
 
@@ -26,11 +28,6 @@ La topología está compuesta por:
   - Sistema de Caja.
   - Sistema de Inventario.
   - DB-Server.
-
-También se incluye la captura original de la topología implementada en GNS3:
-
-[Ver topología original en GNS3](Topologia/Captura%20de%20pantalla%202026-10-04%20210438.png)
-
 ---
 
 ## Direccionamiento IP
