@@ -1,0 +1,84 @@
+COMANDOS UTILIZADOS - SISTEMA DE CAJA
+Ubuntu Server 24.04
+IP: 10.21.41.2/28
+Gateway: 10.21.41.1
+
+# Verificar interfaz de red
+ip a
+
+# Cambiar hostname
+sudo hostnamectl set-hostname Sistema-Caja
+
+# Actualizar repositorios
+sudo apt update
+
+# Instalar paquetes necesarios
+sudo apt install -y nginx openssh-server curl wget iputils-ping net-tools
+
+# Habilitar y arrancar Nginx
+sudo systemctl enable --now nginx
+
+# Habilitar y arrancar SSH
+sudo systemctl enable --now ssh
+
+# Verificar estado de Nginx
+sudo systemctl status nginx
+
+# Verificar estado de SSH
+sudo systemctl status ssh
+
+# Crear página web del Sistema de Caja
+echo '<h1>Sistema de Caja</h1><p>Laboratorio FortiGate</p>' | sudo tee /var/www/html/index.html
+
+# Editar configuración de red estática
+sudo nano /etc/netplan/50-cloud-init.yaml
+
+# Configuración usada en Netplan:
+# network:
+#   version: 2
+#   ethernets:
+#     ens3:
+#       dhcp4: false
+#       addresses:
+#         - 10.21.41.2/28
+#       routes:
+#         - to: default
+#           via: 10.21.41.1
+#       nameservers:
+#         addresses:
+#           - 8.8.8.8
+#           - 1.1.1.1
+
+# Aplicar configuración de red
+sudo netplan apply
+
+# Verificar rutas
+ip route
+
+# Probar gateway de la DMZ
+ping -c 4 10.21.41.1
+
+# Probar servicio web local
+curl http://127.0.0.1
+
+# Probar servicio web por su IP
+curl http://10.21.41.2
+
+# Probar acceso al servidor de Inventario desde la misma DMZ
+curl http://10.21.41.3
+
+# Probar bloqueo hacia VLAN 10
+ping 10.21.40.10
+
+# Probar bloqueo hacia VLAN 20
+ping 10.21.40.140
+
+# Probar actualizaciones permitidas
+sudo apt update
+
+# Probar endpoint permitido de Ubuntu
+curl -I http://do.archive.ubuntu.com
+
+# Probar tráfico no autorizado hacia Internet
+curl http://example.com
+curl https://www.google.com

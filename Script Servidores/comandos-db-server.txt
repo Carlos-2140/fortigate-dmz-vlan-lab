@@ -1,0 +1,62 @@
+COMANDOS UTILIZADOS - DB SERVER
+Ubuntu Server 24.04
+IP: 10.21.41.4/28
+Gateway: 10.21.41.1
+
+# Verificar interfaz de red
+ip a
+
+# Cambiar hostname
+sudo hostnamectl set-hostname DB-Server
+
+# Actualizar repositorios
+sudo apt update
+
+# Instalar MariaDB y herramientas necesarias
+sudo apt install -y mariadb-server openssh-server curl wget iputils-ping net-tools
+
+# Habilitar y arrancar MariaDB
+sudo systemctl enable --now mariadb
+
+# Habilitar y arrancar SSH
+sudo systemctl enable --now ssh
+
+# Verificar estado de MariaDB
+sudo systemctl status mariadb
+
+# Verificar estado de SSH
+sudo systemctl status ssh
+
+# Editar configuración de red estática
+sudo nano /etc/netplan/50-cloud-init.yaml
+
+# Configuración usada en Netplan:
+# network:
+#   version: 2
+#   ethernets:
+#     ens3:
+#       dhcp4: false
+#       addresses:
+#         - 10.21.41.4/28
+#       routes:
+#         - to: default
+#           via: 10.21.41.1
+#       nameservers:
+#         addresses:
+#           - 8.8.8.8
+#           - 1.1.1.1
+
+# Aplicar configuración de red
+sudo netplan apply
+
+# Verificar rutas
+ip route
+
+# Probar gateway de la DMZ
+ping -c 4 10.21.41.1
+
+# Verificar que SSH escucha en el puerto 22
+sudo ss -lntp | grep :22
+
+# Probar actualizaciones permitidas
+sudo apt update
