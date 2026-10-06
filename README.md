@@ -268,7 +268,7 @@ Se incluyen las configuraciones actuales de los dispositivos principales:
 - [SW-USUARIOS running-config](Show%20running-config/Show%20running-config%20Switch-usuarios.txt)
 - [SW-DMZ running-config](Show%20running-config/Show%20running-config%20SW-DMZ.txt)
 
-> **Nota de seguridad:** los archivos de configuración pueden incluir hashes o valores cifrados generados por los dispositivos. Antes de reutilizarlos fuera del laboratorio, deben revisarse y sanitizarse.
+> **Nota de seguridad:** los archivos publicados en `Show running-config/` fueron sanitizados. Las contraseñas, hashes y otros valores sensibles se reemplazaron por `<REDACTED>` o se omitieron del extracto público.
 
 ---
 
