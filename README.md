@@ -1,6 +1,6 @@
 # FortiGate DMZ VLAN Lab
 
-Laboratorio de seguridad de red desarrollado en **GNS3** utilizando **FortiGate 7.0.9**, un switch **Cisco IOSvL2**, dos estaciones Windows y tres servidores Ubuntu en una DMZ.
+Laboratorio de seguridad de red desarrollado en **GNS3** utilizando **FortiGate 7.0.9**, **2 switches Cisco IOSvL2**, dos estaciones Windows y tres servidores Ubuntu dentro de una DMZ.
 
 El objetivo principal es implementar segmentación mediante VLAN, control de acceso entre redes, protección de una DMZ, filtrado web, acceso SSH restringido y salida a Internet limitada para los servidores.
 
@@ -12,22 +12,45 @@ El objetivo principal es implementar segmentación mediante VLAN, control de acc
 
 ## Topología
 
-![Topología real en GNS3](Topologia/Captura%20de%20pantalla%202026-10-04%20210438.png)
+### Topología real en GNS3
 
-La imagen anterior corresponde a la topología real implementada en **GNS3**.
+![Topología real en GNS3](Topologia/Topologia.png)
+
+### Diagrama de la topología
+
+![Diagrama de topología](Topologia/Diagrama%20Topolog%C3%ADa.png)
 
 La topología está compuesta por:
 
 - **Cloud1 / Internet** conectado al **port1** del FortiGate.
 - **FortiGate 7.0.9-1** como firewall y gateway de las redes.
-- **Cisco IOSvL2** conectado al **port2** del FortiGate mediante trunk 802.1Q.
+- **SW-USUARIOS**, conectado al **port2** del FortiGate mediante trunk 802.1Q.
 - **VLAN 10** para usuarios.
 - **VLAN 20** para administración.
-- **DMZ-SW** en el FortiGate, formada por los puertos físicos **port3, port4 y port5**.
-- Tres servidores Ubuntu:
+- **SW-DMZ**, conectado físicamente al **port3** del FortiGate.
+- **VLAN 30** en SW-DMZ como segmentación de capa 2 para los servidores.
+- Tres servidores Ubuntu dentro de la red DMZ:
   - Sistema de Caja.
   - Sistema de Inventario.
   - DB-Server.
+
+### Relación física principal
+
+```text
+Cloud1
+  |
+FortiGate port1
+  |
+  +-- port2 --> SW-USUARIOS Gi0/0
+  |              |-- Gi0/1 --> VLAN20 --> Windows 10.21.40.140/25
+  |              `-- Gi0/2 --> VLAN10 --> Windows 10.21.40.10/25
+  |
+  `-- port3 --> SW-DMZ Gi0/0
+                 |-- Gi0/1 --> Sistema-Caja        10.21.41.2/28
+                 |-- Gi0/2 --> Sistema-Inventario  10.21.41.3/28
+                 `-- Gi0/3 --> DB-Server           10.21.41.4/28
+```
+
 ---
 
 ## Direccionamiento IP
@@ -47,7 +70,7 @@ La topología está compuesta por:
 | DB-Server | `10.21.41.4/28` | `255.255.255.240` | `10.21.41.1` |
 | **WAN / port1** | DHCP desde Cloud1 | Dinámica | Gateway dinámico |
 
-La documentación completa del direccionamiento se encuentra en:
+La documentación completa se encuentra en:
 
 [Direccionamiento/Direccionamiento-IP.md](Direccionamiento/Direccionamiento-IP.md)
 
@@ -55,10 +78,12 @@ La documentación completa del direccionamiento se encuentra en:
 
 ## Configuración del FortiGate
 
+Toda la configuración y demostración del FortiGate se realizó mediante **GUI**, conforme al requerimiento de la práctica.
+
 ### Interfaces principales
 
-- **port1**: WAN, configurado por DHCP desde Cloud1.
-- **port2**: interfaz física usada como trunk hacia el switch Cisco.
+- **port1**: WAN, configurado mediante DHCP desde Cloud1.
+- **port2**: enlace físico hacia SW-USUARIOS.
 - **VLAN10** sobre port2:
   - VLAN ID: `10`
   - Gateway: `10.21.40.1/25`
@@ -67,30 +92,30 @@ La documentación completa del direccionamiento se encuentra en:
   - Gateway: `10.21.40.129/25`
 - **DMZ-SW**:
   - Gateway: `10.21.41.1/28`
-  - Miembros: `port3`, `port4`, `port5`
+  - Miembros configurados: `port3`, `port4`, `port5`
+  - En la topología actual, **port3** es el enlace físico utilizado hacia **SW-DMZ**.
+  - `port4` y `port5` no tienen conexión física.
 
 ### Servidores DMZ
 
-| Puerto FortiGate | Servidor | IP | Servicio principal |
+| Puerto SW-DMZ | Servidor | IP | Servicio principal |
 |---|---|---|---|
-| port3 | Sistema de Caja | `10.21.41.2/28` | Nginx + SSH |
-| port4 | Sistema de Inventario | `10.21.41.3/28` | Nginx + SSH |
-| port5 | DB-Server | `10.21.41.4/28` | MariaDB + SSH |
+| Gi0/1 | Sistema de Caja | `10.21.41.2/28` | Nginx + SSH |
+| Gi0/2 | Sistema de Inventario | `10.21.41.3/28` | Nginx + SSH |
+| Gi0/3 | DB-Server | `10.21.41.4/28` | MariaDB + SSH |
 
 ### Políticas de seguridad implementadas
 
-Entre las principales políticas configuradas se encuentran:
-
 - **VLAN20_to_DMZ_SSH**: permite SSH desde VLAN 20 hacia la DMZ.
-- **VLAN10_to_CAJA_WEB**: permite acceso HTTP/HTTPS desde VLAN 10 al Sistema de Caja.
-- **VLAN10_INVENTARIO_WEBFILTER**: aplica filtrado web al acceso desde VLAN 10 hacia Inventario.
-- **BLOQUEO_VLAN10_INVENTARIO**: política de denegación de respaldo para el servidor de Inventario.
+- **VLAN10_to_CAJA_WEB**: permite HTTP/HTTPS desde VLAN 10 hacia el Sistema de Caja.
+- **VLAN10_INVENTARIO_WEBFILTER**: aplica Web Filter al acceso desde VLAN 10 hacia Inventario.
+- **BLOQUEO_VLAN10_INVENTARIO**: política de denegación de respaldo para Inventario.
 - **DENY_VLAN10_SSH_DMZ**: bloquea SSH desde VLAN 10 hacia la DMZ.
-- **DMZ_to_DNS**: permite únicamente consultas DNS hacia servidores autorizados.
-- **DMZ_to_Ubuntu_Updates**: permite acceso HTTP/HTTPS a los repositorios de actualización de Ubuntu autorizados.
-- **DENY_DMZ_TO_INTERNET**: bloquea el resto del tráfico de la DMZ hacia Internet.
-- **DENY_DMZ_TO_VLAN10**: bloquea tráfico iniciado desde la DMZ hacia VLAN 10.
-- **DENY_DMZ_TO_VLAN20**: bloquea tráfico iniciado desde la DMZ hacia VLAN 20.
+- **DMZ_to_DNS**: permite únicamente consultas DNS hacia destinos autorizados.
+- **DMZ_to_Ubuntu_Updates**: permite HTTP/HTTPS hacia endpoints autorizados de actualización de Ubuntu.
+- **DENY_DMZ_TO_INTERNET**: bloquea el resto del acceso a Internet desde la DMZ.
+- **DENY_DMZ_TO_VLAN10**: impide tráfico iniciado desde la DMZ hacia VLAN 10.
+- **DENY_DMZ_TO_VLAN20**: impide tráfico iniciado desde la DMZ hacia VLAN 20.
 
 ### Web Filter
 
@@ -98,28 +123,25 @@ Se configuró el perfil:
 
 `WF_BLOQUEO_INVENTARIO`
 
-para bloquear el acceso al servidor:
+para bloquear el acceso al servidor de Inventario:
 
 `10.21.41.3`
 
-desde VLAN 10. La evidencia muestra la página de FortiGuard indicando que el acceso fue bloqueado.
+cuando el tráfico se origina desde VLAN 10. La evidencia muestra de forma visible la página de bloqueo de FortiGuard.
 
-La documentación gráfica de la configuración del FortiGate está disponible en:
+La documentación gráfica del FortiGate está disponible en:
 
 [Configuración FortiGate.pdf](Configuracion%20fortigate/Configuracion%20FortiGate.pdf)
 
 ---
 
-## Configuración del switch Cisco
+## Configuración de los switches Cisco
 
-El switch actúa como dispositivo de capa 2 entre el FortiGate y las estaciones Windows.
+Se utilizan **2 switches Cisco IOSvL2** para cumplir con la segmentación y la seguridad básica de red solicitadas.
 
-### VLAN configuradas
+### SW-USUARIOS
 
-- **VLAN 10** – Usuarios.
-- **VLAN 20** – Administración.
-
-### Interfaces
+SW-USUARIOS conecta las estaciones Windows de VLAN 10 y VLAN 20 con el FortiGate.
 
 | Interfaz | Configuración | Destino |
 |---|---|---|
@@ -127,7 +149,12 @@ El switch actúa como dispositivo de capa 2 entre el FortiGate y las estaciones 
 | Gi0/1 | Access VLAN 20 | Windows VLAN20 |
 | Gi0/2 | Access VLAN 10 | Windows VLAN10 |
 
-También se configuraron medidas básicas de seguridad:
+VLAN configuradas:
+
+- **VLAN 10 – USUARIOS**
+- **VLAN 20 – ADMIN**
+
+Medidas de seguridad:
 
 - Port Security.
 - Sticky MAC.
@@ -135,11 +162,34 @@ También se configuraron medidas básicas de seguridad:
 - Violación en modo `restrict`.
 - PortFast.
 - BPDU Guard.
-- SSH versión 2 para administración del switch.
+- SSH versión 2.
 
-El running-config del switch se encuentra en:
+[Running-config de SW-USUARIOS](Show%20running-config/Show%20running-config%20Switch-usuarios.txt)
 
-[Show running-config Switch.txt](Show%20running-config/Show%20running-config%20Switch.txt)
+### SW-DMZ
+
+SW-DMZ concentra los tres servidores y los conecta con el FortiGate a través de port3.
+
+| Interfaz | Configuración | Destino |
+|---|---|---|
+| Gi0/0 | Access VLAN 30 | FortiGate port3 |
+| Gi0/1 | Access VLAN 30 | Sistema de Caja |
+| Gi0/2 | Access VLAN 30 | Sistema de Inventario |
+| Gi0/3 | Access VLAN 30 | DB-Server |
+
+La **VLAN 30 – DMZ** se utiliza únicamente como segmentación de capa 2 en el switch. La red IP de los servidores continúa siendo `10.21.41.0/28`.
+
+Medidas de seguridad:
+
+- Port Security en Gi0/1, Gi0/2 y Gi0/3.
+- Sticky MAC.
+- Máximo de una MAC por puerto.
+- Violación en modo `restrict`.
+- PortFast.
+- BPDU Guard.
+- SSH versión 2.
+
+[Running-config de SW-DMZ](Show%20running-config/Show%20running-config%20SW-DMZ.txt)
 
 ---
 
@@ -184,26 +234,29 @@ Los tres servidores utilizan **Ubuntu Server 24.04**.
 
 ## Evidencias y pruebas realizadas
 
-Las evidencias del laboratorio documentan, entre otras, las siguientes validaciones:
+Las evidencias documentan, entre otras, las siguientes validaciones:
 
-- VLAN 10 obtiene y utiliza el direccionamiento `10.21.40.0/25`.
-- VLAN 20 utiliza el direccionamiento `10.21.40.128/25`.
-- El trunk del switch transporta VLAN 10 y VLAN 20.
-- Port Security se encuentra activo en los puertos de acceso.
-- SSH funciona desde VLAN 20 hacia los servidores autorizados.
+- VLAN 10 y VLAN 20 configuradas correctamente en SW-USUARIOS.
+- Trunk Gi0/0 transportando VLAN 10 y 20.
+- Port Security activo en los puertos de acceso de SW-USUARIOS.
+- VLAN 30 DMZ configurada en SW-DMZ.
+- Gi0/0, Gi0/1, Gi0/2 y Gi0/3 de SW-DMZ activos en VLAN 30.
+- Port Security activo en los puertos de los tres servidores.
+- Sistema de Caja alcanza correctamente el gateway `10.21.41.1`.
+- Windows VLAN10 utiliza `10.21.40.10/25`.
+- Windows VLAN20 utiliza `10.21.40.140/25`.
+- VLAN 20 puede acceder por SSH a los servidores.
 - SSH desde VLAN 10 hacia la DMZ es bloqueado.
 - VLAN 10 puede acceder al Sistema de Caja.
-- El acceso desde VLAN 10 al Sistema de Inventario es bloqueado mediante Web Filter.
+- El acceso de VLAN 10 a Inventario es bloqueado por Web Filter.
 - La DMZ no puede iniciar tráfico hacia VLAN 10 ni VLAN 20.
-- Los servidores DMZ pueden realizar consultas DNS hacia destinos permitidos.
-- Los servidores DMZ pueden acceder a endpoints autorizados de actualización de Ubuntu.
+- DNS desde la DMZ está permitido únicamente hacia destinos autorizados.
+- Las actualizaciones Ubuntu autorizadas están permitidas.
 - El resto del acceso a Internet desde la DMZ es bloqueado.
-- Nginx se encuentra activo en Caja e Inventario.
-- MariaDB se encuentra activo en DB-Server.
+- Nginx está activo en Caja e Inventario.
+- MariaDB está activo en DB-Server.
 
-El documento de evidencias se encuentra en:
-
-[Evidencias/Evidencias.pdf](Evidencias/Evidencias.pdf)
+[Ver documento de evidencias](Evidencias/Evidencias.pdf)
 
 ---
 
@@ -212,9 +265,10 @@ El documento de evidencias se encuentra en:
 Se incluyen las configuraciones actuales de los dispositivos principales:
 
 - [FortiGate running-config](Show%20running-config/fortigate-running-config.txt)
-- [Switch running-config](Show%20running-config/Show%20running-config%20Switch.txt)
+- [SW-USUARIOS running-config](Show%20running-config/Show%20running-config%20Switch-usuarios.txt)
+- [SW-DMZ running-config](Show%20running-config/Show%20running-config%20SW-DMZ.txt)
 
-> **Nota de seguridad:** antes de reutilizar estas configuraciones fuera del laboratorio, se recomienda eliminar o reemplazar cualquier contraseña, hash o valor cifrado presente en los archivos.
+> **Nota de seguridad:** los archivos de configuración pueden incluir hashes o valores cifrados generados por los dispositivos. Antes de reutilizarlos fuera del laboratorio, deben revisarse y sanitizarse.
 
 ---
 
@@ -234,11 +288,12 @@ fortigate-dmz-vlan-lab/
 │   ├── comandos-sistema-caja.txt
 │   └── comandos-sistema-inventario.txt
 ├── Show running-config/
-│   ├── Show running-config Switch.txt
+│   ├── Show running-config SW-DMZ.txt
+│   ├── Show running-config Switch-usuarios.txt
 │   └── fortigate-running-config.txt
 └── Topologia/
-    ├── Captura de pantalla 2026-10-04 210438.png
-    └── Diagrama Topología.png
+    ├── Diagrama Topología.png
+    └── Topologia.png
 ```
 
 ---
@@ -258,7 +313,9 @@ fortigate-dmz-vlan-lab/
 
 ## Objetivos cumplidos
 
-El laboratorio demuestra la implementación de una arquitectura segmentada y protegida mediante un firewall FortiGate, aplicando controles de acceso entre VLAN y DMZ, políticas explícitas de denegación, filtrado web, control de administración mediante SSH y restricción de salida a Internet desde los servidores.
+El laboratorio demuestra una arquitectura segmentada mediante **VLAN 10, VLAN 20 y una DMZ**, utilizando **2 switches Cisco IOSvL2** y un FortiGate como dispositivo de seguridad perimetral.
+
+La implementación aplica controles de acceso entre las redes, restringe la administración SSH únicamente a VLAN 20, bloquea el acceso de VLAN 10 al Sistema de Inventario mediante Web Filter, impide conexiones iniciadas desde la DMZ hacia las redes internas y limita la salida a Internet de los servidores a los destinos necesarios para actualizaciones.
 
 ---
 
