@@ -6,7 +6,7 @@ El objetivo principal es implementar segmentación mediante VLAN, control de acc
 
 ## Video de demostración
 
-> Pendiente: agregar aquí el enlace del video de demostración del laboratorio.
+> (https://www.youtube.com/watch?v=rTyh2_9--GA&t=14s)
 
 ---
 
